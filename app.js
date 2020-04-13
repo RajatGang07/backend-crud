@@ -1,30 +1,37 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
 
 const placesRoutes = require('./routes/placesRoutes');
-const userRoutes = require('./routes/userRoutes');
+const usersRoutes = require('./routes/userRoutes');
 const HttpError = require('./models/httpError');
 
 const app = express();
-
 app.use(bodyParser.json());
 
 app.use('/api/places', placesRoutes);
+app.use('/api/users', usersRoutes);
 
-app.use('/api/users', userRoutes);
-
-app.use((req,res,next) => {
-    const error = new HttpError('Could not find the route', 404);
+app.use((req, res, next) => {
+    const error = new HttpError('Could not find this route.', 404);
     throw error;
 });
 
-app.use((error, req, res, nex) => {
+app.use((error, req, res, next) => {
     if (res.headerSent) {
         return next(error);
     }
     res.status(error.code || 500);
-    res.json({message: error.message || 'An unkown error occured'});
-})
+    res.json({ message: error.message || 'An unknown error occurred!' });
+});
 
-
-app.listen(5000);
+mongoose
+    .connect('mongodb+srv://<username>:<password>@cluster0-x4wqb.mongodb.net/places?retryWrites=true&w=majority',
+    {useNewUrlParser: true, useUnifiedTopology: true }) 
+    .then(() => {
+        app.listen(5000);
+    })
+    .catch(err => {
+        console.log("I am not going to connect");
+        console.log(err);
+    });
