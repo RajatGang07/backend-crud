@@ -59,13 +59,12 @@ const signUp = async (req, res, next) => {
 
 const login = async (req, res, next) => {
     const { email, password } = req.body;
-
     let existingUser;
 
     try {
         existingUser = await User.findOne({ email: email })
     } catch (err) {
-        const error = new HttpError('Logging failed', 500);
+        const error = new HttpError('Logging failed, please try again', 500);
         return next(error);
     }
 
@@ -74,7 +73,7 @@ const login = async (req, res, next) => {
         return next(error);
     }
 
-    res.json({ message: 'Logged In' })
+    res.json({ message: 'Logged In', user: existingUser.toObject({getters: true}) })
 };
 
 exports.getUsers = getUsers;

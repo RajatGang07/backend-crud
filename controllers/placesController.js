@@ -7,7 +7,6 @@ const User = require('../models/user');
 const getCoordsForAddress = require('../util/location');
 
 const getPlaceById = async (req, res, next) => {
-    console.log('Get request in places');
     const placeId = req.params.pid;
     let place;
     try {
@@ -33,7 +32,7 @@ const getPlacesByUserId = async (req, res, next) => {
     let userWithPlaces
     try {
         // places = await Place.find({ creator: userId });
-        userWithPlaces = await (await User.findById(userId)).populate('places');
+        userWithPlaces = await User.findById(userId).populate('places');
     } catch (err) {
         const error = new HttpError('Fetching places failed, please try again', 500);
         return next(error);
@@ -43,7 +42,7 @@ const getPlacesByUserId = async (req, res, next) => {
         return next(error);
 
     }
-    res.json({ userWithPlaces: userWithPlaces.map(place => place.toObject({ getters: true })) });
+    res.json({ userWithPlaces: userWithPlaces.places.map(place => place.toObject({ getters: true })) });
 };
 
 const createPlace = async (req, res, next) => {
@@ -142,7 +141,7 @@ const deletePlace = async (req, res, next) => {
 
     let place;
     try {
-        place = await (await Place.findById(placeId)).populate('creator');
+        place = await Place.findById(placeId).populate('creator');
     } catch (err) {
         const error = new HttpError('Something went wrong, Could not find the place with this Id', 404);
         return next(error);
