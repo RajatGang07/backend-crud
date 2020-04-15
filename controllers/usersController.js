@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-
 const HttpError = require('../models/httpError');
 
 const getUsers = async (req, res, next) => {
@@ -39,11 +40,19 @@ const signUp = async (req, res, next) => {
         return next(error);
     }
 
+    let hashedPassword;
+    try {
+
+        hashedPassword = await bcrypt.hash(password, 12);
+    } catch (err) {
+        const error = new HttpError('Could not create user, please try again', 500);
+        return next(error);
+    }
     const createdUser = new User({
         name,
         email,
-        password,
-        image: 'https://en.wikipedia.org/wiki/Image#/media/File:Image_created_with_a_mobile_phone.png',
+        password: hashedPassword,
+        image: req.file.path,
         places: []
 
     });
@@ -54,7 +63,20 @@ const signUp = async (req, res, next) => {
         const error = new HttpError('Sign up failed, please try again', 500);
         return next(error);
     }
-    res.status(201).json({ user: createdUser.toObject({ getters: true }) })
+
+    let token;
+    try {
+        token = jwt.sign(
+            { userId: createdUser.id, email: createdUser.email },
+            'supersecret_dont_share',
+            { expiresIn: '1h' }
+        );
+    } catch (err) {
+        const error = new HttpError('Sign up failed, please try again', 500);
+        return next(error);
+    }
+
+    res.status(201).json({ userId: createdUser.id, email: createdUser.email, token: token })
 };
 
 const login = async (req, res, next) => {
@@ -68,12 +90,39 @@ const login = async (req, res, next) => {
         return next(error);
     }
 
-    if (!existingUser && existingUser.password !== password) {
-        const error = new HttpError('Wrong Password', 401);
+    if (!existingUser) {
+        const error = new HttpError('Wrong Password', 403);
         return next(error);
     }
 
-    res.json({ message: 'Logged In', user: existingUser.toObject({getters: true}) })
+
+    let isvalidPassword = false;
+    try {
+        isvalidPassword = await bcrypt.compare(password, existingUser.password);
+    } catch (err) {
+        const error = new HttpError('Check your credentials and try again', 403);
+        return next(error);
+    }
+
+    if (!isvalidPassword) {
+        const error = new HttpError('Check your credentials and try again', 403);
+        return next(error);
+    }
+
+
+    let token;
+    try {
+        token = jwt.sign(
+            { userId: existingUser.id, email: existingUser.email },
+            'supersecret_dont_share',
+            { expiresIn: '1h' }
+        );
+    } catch (err) {
+        const error = new HttpError('Login failed, please try again', 500);
+        return next(error);
+    }
+
+    res.json({ message: 'Logged In', userId: existingUser.id, email: existingUser.email, token: token })
 };
 
 exports.getUsers = getUsers;

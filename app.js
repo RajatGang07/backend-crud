@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const placesRoutes = require('./routes/placesRoutes');
 const usersRoutes = require('./routes/userRoutes');
@@ -9,7 +11,9 @@ const HttpError = require('./models/httpError');
 const app = express();
 app.use(bodyParser.json());
 
-app.use((req,res,next) => {
+app.use('/uploads/images', express.static(path.join('uploads', 'images')));
+
+app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
@@ -25,6 +29,11 @@ app.use((req, res, next) => {
 });
 
 app.use((error, req, res, next) => {
+    if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+            console.log(err)
+        });
+    }
     if (res.headerSent) {
         return next(error);
     }
@@ -34,7 +43,7 @@ app.use((error, req, res, next) => {
 
 mongoose
     .connect('mongodb+srv://<username>:<password>@cluster0-x4wqb.mongodb.net/mern?retryWrites=true&w=majority',
-    {useNewUrlParser: true, useUnifiedTopology: true }) 
+        { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
         app.listen(5000);
     })
